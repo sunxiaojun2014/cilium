@@ -47,17 +47,22 @@ var _ = Describe("K8sUpdates", func() {
 		kubectl.Exec(fmt.Sprintf(
 			"%s delete --all pods,svc,cnp -n %s", helpers.KubectlCmd, helpers.DefaultNamespace))
 
+		kubectl.DeleteETCDOperator()
+
 		ExpectAllPodsTerminated(kubectl)
 	})
 
 	AfterAll(func() {
 		_ = kubectl.Apply(helpers.DNSDeployment())
 
+		// Deploy the etcd operator as it was removed by the delete --all
+		err := kubectl.DeployETCDOperator()
+		Expect(err).To(BeNil(), "Unable to deploy etcd operator")
+
 		// Re-install the cilium developer image after tests are completed
-		err := kubectl.CiliumInstall(helpers.CiliumDefaultDSPatch, helpers.CiliumConfigMapPatch)
+		err = kubectl.CiliumInstall(helpers.CiliumDefaultDSPatch, helpers.CiliumConfigMapPatch)
 		Expect(err).To(BeNil(), "Cilium cannot be installed")
 
-		ExpectCiliumReady(kubectl)
 		ExpectCiliumReady(kubectl)
 	})
 
@@ -118,6 +123,8 @@ func InstallAndValidateCiliumUpgrades(kubectl *helpers.Kubectl, oldVersion, newV
 
 		_ = kubectl.DeleteResource(
 			"ds", fmt.Sprintf("-n %s cilium", helpers.KubeSystemNamespace))
+
+		kubectl.DeleteETCDOperator()
 	}
 
 	testfunc := func() {
@@ -130,6 +137,13 @@ func InstallAndValidateCiliumUpgrades(kubectl *helpers.Kubectl, oldVersion, newV
 		_ = kubectl.Delete(helpers.DNSDeployment())
 
 		ExpectAllPodsTerminated(kubectl)
+
+		By("Installing kube-dns")
+		_ = kubectl.Apply(helpers.DNSDeployment())
+
+		// Deploy the etcd operator
+		err = kubectl.DeployETCDOperator()
+		Expect(err).To(BeNil(), "Unable to deploy etcd operator")
 
 		err = kubectl.CiliumInstallVersion(
 			helpers.CiliumDefaultDSPatch,
@@ -188,12 +202,8 @@ func InstallAndValidateCiliumUpgrades(kubectl *helpers.Kubectl, oldVersion, newV
 			ExpectWithOffset(1, res).ShouldNot(helpers.CMDSuccess(), "Expect a 403 from app1-service")
 		}
 
-		By("Installing kube-dns")
-		res := kubectl.Apply(helpers.DNSDeployment())
-		ExpectWithOffset(1, res).To(helpers.CMDSuccess(), "Kube-dns cannot be installed")
-
 		By("Creating some endpoints and L7 policy")
-		res = kubectl.Apply(demoPath)
+		res := kubectl.Apply(demoPath)
 		ExpectWithOffset(1, res).To(helpers.CMDSuccess(), "cannot apply dempo application")
 
 		err := kubectl.WaitforPods(helpers.DefaultNamespace, "-l zgroup=testapp", timeout)
