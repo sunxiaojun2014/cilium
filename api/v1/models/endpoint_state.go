@@ -22,10 +22,10 @@ type EndpointState string
 const (
 	// EndpointStateCreating captures enum value "creating"
 	EndpointStateCreating EndpointState = "creating"
+	// EndpointStateInit captures enum value "init"
+	EndpointStateInit EndpointState = "init"
 	// EndpointStateWaitingForIdentity captures enum value "waiting-for-identity"
 	EndpointStateWaitingForIdentity EndpointState = "waiting-for-identity"
-	// EndpointStateNotReady captures enum value "not-ready"
-	EndpointStateNotReady EndpointState = "not-ready"
 	// EndpointStateWaitingToRegenerate captures enum value "waiting-to-regenerate"
 	EndpointStateWaitingToRegenerate EndpointState = "waiting-to-regenerate"
 	// EndpointStateRegenerating captures enum value "regenerating"
@@ -34,6 +34,8 @@ const (
 	EndpointStateRestoring EndpointState = "restoring"
 	// EndpointStateReady captures enum value "ready"
 	EndpointStateReady EndpointState = "ready"
+	// EndpointStateOutdated captures enum value "outdated"
+	EndpointStateOutdated EndpointState = "outdated"
 	// EndpointStateDisconnecting captures enum value "disconnecting"
 	EndpointStateDisconnecting EndpointState = "disconnecting"
 	// EndpointStateDisconnected captures enum value "disconnected"
@@ -45,7 +47,7 @@ var endpointStateEnum []interface{}
 
 func init() {
 	var res []EndpointState
-	if err := json.Unmarshal([]byte(`["creating","waiting-for-identity","not-ready","waiting-to-regenerate","regenerating","restoring","ready","disconnecting","disconnected"]`), &res); err != nil {
+	if err := json.Unmarshal([]byte(`["creating","init","waiting-for-identity","waiting-to-regenerate","regenerating","restoring","ready","outdated","disconnecting","disconnected"]`), &res); err != nil {
 		panic(err)
 	}
 	for _, v := range res {

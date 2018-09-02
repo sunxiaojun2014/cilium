@@ -63,7 +63,7 @@ var policyWaitCmd = &cobra.Command{
 					ep.Status.State == models.EndpointStateReady:
 					ready++
 
-				case ep.Status.State == models.EndpointStateNotReady:
+				case ep.Status.State == models.EndpointStateOutdated:
 					notReady++
 				}
 			}
