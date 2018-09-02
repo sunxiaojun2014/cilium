@@ -424,9 +424,6 @@ func (d *Daemon) deleteEndpointQuiet(ep *endpoint.Endpoint, releaseIP bool) []er
 
 	errors := []error{}
 
-	// Wait for existing builds to complete and prevent further builds
-	ep.BuildMutex.Lock()
-
 	// Lock out any other writers to the endpoint
 	ep.UnconditionalLock()
 
@@ -436,7 +433,6 @@ func (d *Daemon) deleteEndpointQuiet(ep *endpoint.Endpoint, releaseIP bool) []er
 	switch ep.GetStateLocked() {
 	case endpoint.StateDisconnecting, endpoint.StateDisconnected:
 		ep.Unlock()
-		ep.BuildMutex.Unlock()
 		return []error{}
 	}
 
@@ -445,7 +441,11 @@ func (d *Daemon) deleteEndpointQuiet(ep *endpoint.Endpoint, releaseIP bool) []er
 	// Remove the endpoint before we clean up. This ensures it is no longer
 	// listed or queued for rebuilds.
 	endpointmanager.Remove(ep)
+	ep.Unlock()
 
+	ep.DrainAllBuilds()
+
+	ep.UnconditionalLock()
 	// If dry mode is enabled, no changes to BPF maps are performed
 	if !option.Config.DryMode {
 		if errs := lxcmap.DeleteElement(ep); errs != nil {
@@ -479,8 +479,6 @@ func (d *Daemon) deleteEndpointQuiet(ep *endpoint.Endpoint, releaseIP bool) []er
 		errors = append(errors, fmt.Errorf("unable to remove proxy redirects: %s", err))
 	}
 	cancel()
-
-	ep.BuildMutex.Unlock()
 
 	return errors
 }
