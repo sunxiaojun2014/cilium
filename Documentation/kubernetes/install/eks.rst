@@ -54,17 +54,36 @@ Create EKS Cluster
 
        kubectl -n kube-system set env ds aws-node AWS_VPC_K8S_CNI_EXTERNALSNAT=true
 
-#. Assign a fixed security identity to kube-dns
+#. Assign a fixed security identity to ``kube-dns`` by editing the deployment and adding the label ``io.cilium.fixed-identity: kube-dns``
 
    .. code:: bash
 
-       kubectl label -n kube-system pod $(kubectl -n kube-system get pods -l k8s-app=kube-dns -o jsonpath='{range .items[]}{.metadata.name}{" "}{end}') io.cilium.fixed-identity=kube-dns
+       kubectl edit deployment kube-dns -n kube-system 
+    
+   .. code-block:: yaml
 
-   This steps allows Cilium to bring up kube-dns networking and enforce
+       spec:
+         ...
+         template:
+           metadata:
+             ...
+             labels:
+               ...
+               io.cilium.fixed-identity: kube-dns
+   
+   This step allows Cilium to bring up kube-dns networking and enforce
    security policies before etcd is up.
 
 Prepare etcd operator
 =====================
+
+#. Dependencies
+   
+   The certificate generation scripts have dependencies on ``cfssl`` and ``cfssljson``, which can be downloaded 
+   from `here <https://pkg.cfssl.org/>`_ . Make sure to copy the binaries in a directory which is in your ``PATH`` 
+   variable. Alternatively, if you have Go installed, then you can also get the libraries using 
+   ``go get -u github.com/cloudflare/cfssl/cmd/cfssl`` 
+   and ``go get -u github.com/cloudflare/cfssl/cmd/cfssljson``. 
 
 #. Generate and deploy etcd certificates
 
