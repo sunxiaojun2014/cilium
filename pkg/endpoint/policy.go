@@ -778,6 +778,14 @@ func (e *Endpoint) regenerate(owner Owner, context *RegenerationContext) (retErr
 		return err
 	}
 
+	// Update desired policy for endpoint because policy has now been realized
+	// in the datapath. PolicyMap state is not updated here, because that is
+	// performed in endpoint.syncPolicyMap().
+	stats.waitingForLock.Start()
+	if err = e.LockAlive(); err != nil {
+		return err
+	}
+
 	// Depending upon result of BPF regeneration (compilation executed),
 	// shift endpoint directories to match said BPF regeneration
 	// results.
@@ -786,13 +794,6 @@ func (e *Endpoint) regenerate(owner Owner, context *RegenerationContext) (retErr
 		return fmt.Errorf("error synchronizing endpoint BPF program directories: %s", err)
 	}
 
-	// Update desired policy for endpoint because policy has now been realized
-	// in the datapath. PolicyMap state is not updated here, because that is
-	// performed in endpoint.syncPolicyMap().
-	stats.waitingForLock.Start()
-	if err = e.LockAlive(); err != nil {
-		return err
-	}
 	stats.waitingForLock.End()
 
 	// Keep PolicyMap for this endpoint in sync with desired / realized state.
